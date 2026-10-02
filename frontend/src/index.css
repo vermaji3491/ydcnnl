@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "DM Sans", system-ui, sans-serif;
+  color: #102a43;
+  background: #f8fafc;
+}
+
+html { scroll-behavior: smooth; }
+
+body { margin: 0; }
+
+h1, h2, h3, h4 {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+::selection {
+  background: #d4af37;
+  color: #0a192f;
+}
+
+.container-wide {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+.btn-gold {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-3 font-bold text-navy transition hover:-translate-y-0.5 hover:bg-gold2 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2;
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/60 px-5 py-3 font-bold text-white transition hover:bg-white hover:text-navy;
+}
+
+.section-title {
+  @apply text-3xl font-bold text-navy sm:text-4xl;
+}
+
+.section-kicker {
+  @apply mb-2 text-sm font-bold uppercase tracking-[0.18em] text-gold;
+}
+
+.page-hero {
+  @apply relative overflow-hidden bg-navy py-20 text-white sm:py-28;
+  background-image: linear-gradient(90deg, rgba(10,25,47,.96), rgba(10,25,47,.78)), url("/images/college-bg.png?auto=format&fit=crop&w=2000&q=85");
+  background-size: cover;
+  background-position: center;
+}

@@ -1,0 +1,10 @@
+import { AdminLogin, ProtectedAdmin, Dashboard, Manager } from './admin/AdminCMS';
+
+<Route path="/admin/login" element={<AdminLogin />} />
+<Route path="/admin" element={<ProtectedAdmin />}>
+  <Route index element={<Dashboard />} />
+  <Route path="achievements" element={<Manager type="achievements" />} />
+  <Route path="training-placement" element={<Manager type="visits" />} />
+  <Route path="gallery" element={<Manager type="gallery" />} />
+  <Route path="nss" element={<Manager type="nss" />} />
+</Route>
