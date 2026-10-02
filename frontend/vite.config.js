@@ -9,6 +9,11 @@ const base = process.env.GITHUB_ACTIONS && repositoryName && !isUserSite
 
 export default defineConfig({
   base,
+  build: {
+    sourcemap: false,
+    assetsInlineLimit: 0,
+    chunkSizeWarningLimit: 1000,
+  },
   plugins: [
     react(),
     {
