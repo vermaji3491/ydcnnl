@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { normalizeRecruitmentPayload } = require("../routes/contentHelpers");
 const upload = require("../middleware/upload");
+const { validateRecruitment } = require("../lib/validation");
 
 test("allows multiple uploaded files for recruitment applications", () => {
   assert.equal(upload.limits?.files, undefined);
@@ -34,4 +35,21 @@ test("normalizes recruitment form values and keeps uploaded files metadata", () 
   assert.equal(payload.resume.originalName, "resume.pdf");
   assert.equal(payload.documents.length, 2);
   assert.equal(payload.documents[0].originalName, "id-card.png");
+});
+
+test("validates required recruitment fields and resume metadata", () => {
+  const payload = normalizeRecruitmentPayload(
+    {
+      name: "Jane Doe",
+      email: "jane@example.com",
+      phone: "1234567890",
+      position: "Lecturer",
+      qualification: "M.Sc.",
+      declaration: "true",
+    },
+    [{ fieldname: "resume", originalname: "resume.pdf", filename: "resume-1.pdf", mimetype: "application/pdf", size: 1024 }]
+  );
+
+  assert.deepEqual(validateRecruitment(payload), []);
+  assert.ok(validateRecruitment({ ...payload, resume: undefined }).some((message) => message.includes("resume")));
 });

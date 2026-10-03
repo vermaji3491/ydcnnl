@@ -1,8 +1,8 @@
-const Contact = require("../models/contact");
+const { insertRow } = require("../lib/database");
 
 const createContact = async (req, res) => {
   try {
-    const contact = await Contact.create(req.body);
+    const contact = await insertRow("contacts", req.body);
 
     res.status(201).json({
       success: true,

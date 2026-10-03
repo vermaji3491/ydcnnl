@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const Admission = require("../models/Admission");
+const { validateAdmission } = require("../lib/validation");
 
 const validAdmission = {
   studentName: "Test Student",
@@ -21,23 +21,19 @@ const validAdmission = {
   declaration: true,
 };
 
-test("accepts an admission payload with all required backend fields", async () => {
-  await assert.doesNotReject(new Admission(validAdmission).validate());
+test("accepts an admission payload with all required backend fields", () => {
+  assert.deepEqual(validateAdmission(validAdmission), []);
 });
 
-test("rejects missing required fields and invalid contact data", async () => {
-  const error = await new Admission({
+test("rejects missing required fields and invalid contact data", () => {
+  const errors = validateAdmission({
     ...validAdmission,
     mobile: "123",
     email: "not-an-email",
     lastQualification: undefined,
-  }).validate().then(
-    () => null,
-    (validationError) => validationError
-  );
+  });
 
-  assert.ok(error);
-  assert.ok(error.errors.mobile);
-  assert.ok(error.errors.email);
-  assert.ok(error.errors.lastQualification);
+  assert.ok(errors.some((message) => message.includes("Mobile number")));
+  assert.ok(errors.some((message) => message.includes("valid email")));
+  assert.ok(errors.some((message) => message.includes("lastQualification")));
 });

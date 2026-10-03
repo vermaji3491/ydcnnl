@@ -1,7 +1,8 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const Admission = require("../models/Admission");
+const { deleteRow, getRow, insertRow, selectRows } = require("../lib/database");
+const { validateAdmission } = require("../lib/validation");
 const upload = require("../middleware/upload");
 const protect = require("../middleware/auth");
 
@@ -29,22 +30,22 @@ router.post("/", upload.single("document"), async (req, res) => {
       declaration,
     } = req.body;
 
-    const admission = await Admission.create({
+    const payload = {
       studentName,
-      fatherName,
-      motherName,
+      fatherName: fatherName?.trim(),
+      motherName: motherName?.trim(),
       dob,
       gender,
       category,
-      mobile,
-      email,
-      state,
-      city,
-      address,
-      course,
-      academicYear,
-      lastQualification,
-      passingYear,
+      mobile: mobile?.trim(),
+      email: email?.trim().toLowerCase(),
+      state: state?.trim(),
+      city: city?.trim(),
+      address: address?.trim(),
+      course: course?.trim(),
+      academicYear: academicYear?.trim(),
+      lastQualification: lastQualification?.trim(),
+      passingYear: Number(passingYear),
       declaration: declaration === true || declaration === "true",
       document: req.file
         ? {
@@ -55,7 +56,23 @@ router.post("/", upload.single("document"), async (req, res) => {
             size: req.file.size,
           }
         : undefined,
-    });
+    };
+    payload.studentName = studentName?.trim();
+
+    const validationErrors = validateAdmission(payload);
+    if (validationErrors.length) {
+      if (req.file) {
+        const uploadedPath = path.join(__dirname, "..", "uploads", req.file.filename);
+        if (fs.existsSync(uploadedPath)) fs.unlinkSync(uploadedPath);
+      }
+      return res.status(400).json({
+        success: false,
+        message: "Please check the admission form fields.",
+        errors: validationErrors,
+      });
+    }
+
+    const admission = await insertRow("admissions", payload);
 
     res.status(201).json({
       success: true,
@@ -63,7 +80,7 @@ router.post("/", upload.single("document"), async (req, res) => {
       admission,
     });
   } catch (error) {
-    // If MongoDB validation fails after the file was uploaded,
+    // If database insertion fails after the file was uploaded,
     // remove the unused uploaded file.
     if (req.file) {
       const uploadedPath = path.join(__dirname, "..", "uploads", req.file.filename);
@@ -73,14 +90,6 @@ router.post("/", upload.single("document"), async (req, res) => {
     }
 
     console.error("Admission submission error:", error);
-
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: "Please check the admission form fields.",
-        errors: Object.values(error.errors).map((item) => item.message),
-      });
-    }
 
     return res.status(500).json({
       success: false,
@@ -93,7 +102,7 @@ router.post("/", upload.single("document"), async (req, res) => {
 // Get all admission registrations for the admin dashboard.
 router.get("/", protect, async (req, res) => {
   try {
-    const admissions = await Admission.find().sort({ createdAt: -1 });
+    const admissions = await selectRows("admissions", { order: "created_at", ascending: false });
 
     res.json({
       success: true,
@@ -110,10 +119,10 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
-// Get one admission by MongoDB ID.
+// Get one admission by its UUID.
 router.get("/:id", protect, async (req, res) => {
   try {
-    const admission = await Admission.findById(req.params.id);
+    const admission = await getRow("admissions", req.params.id);
 
     if (!admission) {
       return res.status(404).json({
@@ -139,7 +148,7 @@ router.get("/:id", protect, async (req, res) => {
 // Delete an admission and its uploaded document.
 router.delete("/:id", protect, async (req, res) => {
   try {
-    const admission = await Admission.findById(req.params.id);
+    const admission = await getRow("admissions", req.params.id);
 
     if (!admission) {
       return res.status(404).json({
@@ -155,7 +164,7 @@ router.delete("/:id", protect, async (req, res) => {
       }
     }
 
-    await Admission.findByIdAndDelete(req.params.id);
+    await deleteRow("admissions", req.params.id);
 
     res.json({
       success: true,

@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const Notice = require("../models/Notice");
+const { deleteRow, insertRow, selectRows, updateRow } = require("../lib/database");
 const protect = require("../middleware/auth");
 const { dateOnly, serialize } = require("./contentHelpers");
 
@@ -14,32 +14,29 @@ const noticePayload = ({ is_active, published, ...body }) => ({
 });
 
 router.get("/admin", protect, async (_req, res) => {
-	const notices = await Notice.find().sort({ date: -1 });
+	const notices = await selectRows("notices", { order: "date", ascending: false });
 	res.json({ success: true, notices: notices.map(serializeNotice) });
 });
 
 router.get("/", async (_req, res) => {
-	const notices = await Notice.find({ published: true }).sort({ date: -1 });
+	const notices = await selectRows("notices", { filters: { published: true }, order: "date", ascending: false });
 	res.json({ success: true, notices: notices.map(serializeNotice) });
 });
 
 router.post("/", protect, async (req, res) => {
-	const notice = await Notice.create(noticePayload(req.body));
+	const notice = await insertRow("notices", noticePayload(req.body));
 	res.status(201).json({ success: true, notice: serializeNotice(notice) });
 });
 
 router.put("/:id", protect, async (req, res) => {
-	const notice = await Notice.findByIdAndUpdate(req.params.id, noticePayload(req.body), {
-		new: true,
-		runValidators: true,
-	});
+	const notice = await updateRow("notices", req.params.id, noticePayload(req.body));
 	if (!notice) return res.status(404).json({ success: false, message: "Notice not found." });
 	res.json({ success: true, notice: serializeNotice(notice) });
 });
 
 router.delete("/:id", protect, async (req, res) => {
-	const notice = await Notice.findByIdAndDelete(req.params.id);
-	if (!notice) return res.status(404).json({ success: false, message: "Notice not found." });
+	const deleted = await deleteRow("notices", req.params.id);
+	if (!deleted) return res.status(404).json({ success: false, message: "Notice not found." });
 	res.json({ success: true });
 });
 

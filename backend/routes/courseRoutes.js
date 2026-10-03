@@ -1,1 +1,25 @@
-const router=require("express").Router();const Course=require("../models/Course");const protect=require("../middleware/auth");router.get("/",async(_req,res)=>res.json({success:true,courses:await Course.find({active:true}).sort({name:1})}));router.post("/",protect,async(req,res)=>res.status(201).json({success:true,course:await Course.create(req.body)}));router.put("/:id",protect,async(req,res)=>res.json({success:true,course:await Course.findByIdAndUpdate(req.params.id,req.body,{new:true})}));router.delete("/:id",protect,async(req,res)=>{await Course.findByIdAndDelete(req.params.id);res.json({success:true})});module.exports=router;
+const router = require("express").Router();
+const { deleteRow, insertRow, selectRows, updateRow } = require("../lib/database");
+const protect = require("../middleware/auth");
+
+router.get("/", async (_req, res) => {
+	const courses = await selectRows("courses", { filters: { active: true }, order: "name" });
+	res.json({ success: true, courses });
+});
+
+router.post("/", protect, async (req, res) => {
+	const course = await insertRow("courses", req.body);
+	res.status(201).json({ success: true, course });
+});
+
+router.put("/:id", protect, async (req, res) => {
+	const course = await updateRow("courses", req.params.id, req.body);
+	res.json({ success: true, course });
+});
+
+router.delete("/:id", protect, async (req, res) => {
+	await deleteRow("courses", req.params.id);
+	res.json({ success: true });
+});
+
+module.exports = router;

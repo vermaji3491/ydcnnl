@@ -1,31 +1,43 @@
 const router = require("express").Router();
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const Admin = require("../models/Admin");
+const { countRows } = require("../lib/database");
+const { getSupabase, getSupabaseAuth } = require("../config/db");
 const protect = require("../middleware/auth");
 
 router.post("/login", async (req, res) => {
 	try {
 		const email = req.body.email?.trim().toLowerCase();
 		const password = req.body.password || "";
-		const admin = await Admin.findOne({ email });
+		if (!email || !password) {
+			return res.status(400).json({ success: false, message: "Email and password are required." });
+		}
 
-		if (!admin || !admin.active || !(await bcrypt.compare(password, admin.password))) {
+		const { data, error } = await getSupabaseAuth().auth.signInWithPassword({ email, password });
+		if (error || !data.session || !data.user) {
 			return res.status(401).json({ success: false, message: "Invalid email or password." });
 		}
 
-		const token = jwt.sign(
-			{ id: admin._id, role: admin.role },
-			process.env.JWT_SECRET,
-			{ expiresIn: "8h" }
-		);
+		const { data: admin, error: adminError } = await getSupabase()
+			.from("admin_users")
+			.select("id, display_name")
+			.eq("id", data.user.id)
+			.maybeSingle();
+		if (adminError) throw adminError;
+		if (!admin) {
+			return res.status(403).json({ success: false, message: "This account is not an administrator." });
+		}
 
 		return res.json({
 			success: true,
-			token,
-			admin: { id: admin._id, name: admin.name, email: admin.email, role: admin.role },
+			token: data.session.access_token,
+			admin: {
+				id: data.user.id,
+				name: admin.display_name || data.user.user_metadata?.name || email,
+				email: data.user.email,
+				role: "admin",
+			},
 		});
 	} catch (error) {
+		console.error("Admin login error:", error.message);
 		return res.status(500).json({ success: false, message: "Login failed." });
 	}
 });
@@ -35,20 +47,21 @@ router.get("/me", protect, async (req, res) => {
 });
 
 router.get("/dashboard", protect, async (_req, res) => {
-	const models = {
-		Admission: require("../models/Admission"),
-		Contact: require("../models/contact"),
-		Notice: require("../models/Notice"),
-		Gallery: require("../models/Gallery"),
-		Achievement: require("../models/Achievement"),
-		Fee: require("../models/Fee"),
-		IndustrialVisit: require("../models/IndustrialVisit"),
-		NSSActivity: require("../models/NSSActivity"),
-		Course: require("../models/Course"),
-		Event: require("../models/Event"),
+	const tables = {
+		Admission: "admissions",
+		Contact: "contacts",
+		Notice: "notices",
+		Gallery: "gallery_items",
+		Achievement: "achievements",
+		Fee: "fees",
+		IndustrialVisit: "industrial_visits",
+		NSSActivity: "nss_activities",
+		Course: "courses",
+		Event: "events",
+		Recruitment: "recruitments",
 	};
 	const entries = await Promise.all(
-		Object.entries(models).map(async ([name, Model]) => [name, await Model.countDocuments()])
+		Object.entries(tables).map(async ([name, table]) => [name, await countRows(table)])
 	);
 
 	res.json({ success: true, stats: Object.fromEntries(entries) });

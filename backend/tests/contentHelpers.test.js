@@ -2,8 +2,8 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { dateOnly, serialize } = require("../routes/contentHelpers");
 
-test("serializes Mongo documents with a stable id and optional fields", () => {
-	const document = { _id: "abc123", title: "A notice", published: true };
+test("serializes Supabase rows with a stable id and optional fields", () => {
+	const document = { id: "abc123", title: "A notice", published: true };
 
 	assert.deepEqual(serialize(document), {
 		...document,

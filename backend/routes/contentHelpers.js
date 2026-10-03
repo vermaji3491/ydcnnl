@@ -3,10 +3,10 @@ function dateOnly(value) {
 }
 
 function serialize(document, fields = () => ({})) {
-	const value = document.toObject ? document.toObject() : document;
+	const value = document;
 	return {
 		...value,
-		id: String(value._id || value.id),
+		id: String(value.id),
 		...fields(value),
 	};
 }

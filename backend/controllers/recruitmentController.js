@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
-const Recruitment = require("../models/Recruitment");
+const { deleteRow, getRow, insertRow, selectRows } = require("../lib/database");
+const { validateRecruitment } = require("../lib/validation");
 const { normalizeRecruitmentPayload } = require("../routes/contentHelpers");
 
 const cleanupUploadedFiles = (files = []) => {
@@ -23,7 +24,17 @@ const createRecruitment = async (req, res) => {
     ];
 
     const payload = normalizeRecruitmentPayload(req.body, files);
-    const recruitment = await Recruitment.create(payload);
+    const validationErrors = validateRecruitment(payload);
+    if (validationErrors.length) {
+      cleanupUploadedFiles(files);
+      return res.status(400).json({
+        success: false,
+        message: "Please check the recruitment form fields.",
+        errors: validationErrors,
+      });
+    }
+
+    const recruitment = await insertRow("recruitments", payload);
 
     res.status(201).json({
       success: true,
@@ -38,14 +49,6 @@ const createRecruitment = async (req, res) => {
 
     console.error("Recruitment submission error:", error);
 
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: "Please check the recruitment form fields.",
-        errors: Object.values(error.errors).map((item) => item.message),
-      });
-    }
-
     return res.status(500).json({
       success: false,
       message: "Failed to submit recruitment application.",
@@ -56,7 +59,7 @@ const createRecruitment = async (req, res) => {
 
 const getRecruitments = async (req, res) => {
   try {
-    const applications = await Recruitment.find().sort({ createdAt: -1 });
+    const applications = await selectRows("recruitments", { order: "created_at", ascending: false });
 
     res.json({
       success: true,
@@ -74,7 +77,7 @@ const getRecruitments = async (req, res) => {
 
 const getRecruitmentById = async (req, res) => {
   try {
-    const application = await Recruitment.findById(req.params.id);
+    const application = await getRow("recruitments", req.params.id);
 
     if (!application) {
       return res.status(404).json({
@@ -95,7 +98,7 @@ const getRecruitmentById = async (req, res) => {
 
 const deleteRecruitment = async (req, res) => {
   try {
-    const application = await Recruitment.findById(req.params.id);
+    const application = await getRow("recruitments", req.params.id);
 
     if (!application) {
       return res.status(404).json({
@@ -104,7 +107,7 @@ const deleteRecruitment = async (req, res) => {
       });
     }
 
-    const fileNames = [application.resume?.fileName, ...application.documents.map((item) => item.fileName)];
+    const fileNames = [application.resume?.fileName, ...(application.documents || []).map((item) => item.fileName)];
 
     fileNames.filter(Boolean).forEach((fileName) => {
       const filePath = path.join(__dirname, "..", "uploads", fileName);
@@ -113,7 +116,7 @@ const deleteRecruitment = async (req, res) => {
       }
     });
 
-    await Recruitment.findByIdAndDelete(req.params.id);
+    await deleteRow("recruitments", req.params.id);
 
     return res.json({
       success: true,

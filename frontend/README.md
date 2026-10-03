@@ -32,6 +32,6 @@ The map area is intentionally a placeholder for the official Google Maps embed.
 
 ## Publish on GitHub Pages
 
-Push this repository to GitHub on the `main` or `master` branch. In the repository, open **Settings > Pages** and set the build and deployment source to **GitHub Actions**. The workflow at `.github/workflows/deploy-pages.yml` builds and deploys the frontend on each push.
+Push this repository to GitHub on the `main` or `master` branch. In the repository, open **Settings > Pages** and set the build and deployment source to **GitHub Actions**. The workflow at `.github/workflows/deploy-pages.yml` builds and deploys the frontend on each push. The site URL will be `https://<owner>.github.io/<repository>/`.
 
-GitHub Pages hosts only the frontend. To enable API-backed pages and forms, host the backend separately and add repository Actions variables named `VITE_API_URL`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY` as needed.
+GitHub Pages hosts only the frontend; it cannot run the Express backend. Deploy `backend/` to a Node.js host, set its `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` environment variables, then add a repository Actions variable named `VITE_API_URL` containing that API's HTTPS origin. Set the backend's `CLIENT_URL` to `https://<owner>.github.io` for CORS. The public Supabase URL and publishable key are configured as workflow defaults and can optionally be overridden with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` Actions variables.
